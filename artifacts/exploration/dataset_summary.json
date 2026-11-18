@@ -1,0 +1,14 @@
+{
+  "train": {
+    "trips": 80,
+    "gps_observations": 208417,
+    "median_trip_observations": 1529.0,
+    "median_sampling_interval_s": 1.0
+  },
+  "student_test": {
+    "trips": 10,
+    "gps_observations": 19160,
+    "median_trip_observations": 1420.0,
+    "median_sampling_interval_s": 1.0
+  }
+}

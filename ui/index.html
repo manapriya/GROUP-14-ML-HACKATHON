@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PathSnap | Route Reconstruction</title>
+  <link rel="preconnect" href="https://unpkg.com"><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root{--ink:#172a35;--muted:#677984;--line:#dfe7e9;--sea:#007f78;--sky:#e9f3f1;--panel:#fff;--bg:#f3f6f5;--amber:#d27a25}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,Segoe UI,Arial,sans-serif}
+    header{height:70px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;background:#102e39;color:white;border-bottom:3px solid #22a194}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:750;font-size:19px;letter-spacing:.01em}.mark{width:32px;height:32px;border-radius:10px;background:#e1f6f1;color:#007f78;display:grid;place-items:center;font-size:18px}
+    .status{font-size:12px;color:#c7dcda;display:flex;gap:8px;align-items:center}.dot{width:8px;height:8px;background:#77d5a2;border-radius:50%}.wrap{max-width:1440px;margin:24px auto;padding:0 24px}.intro{display:flex;justify-content:space-between;align-items:end;margin-bottom:16px}.intro h1{font-size:25px;margin:0 0 4px}.intro p{margin:0;color:var(--muted)}
+    .api{font-size:12px;color:var(--muted);display:flex;gap:7px;align-items:center}.api input{width:235px;border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:white;color:var(--ink)}
+    .grid{display:grid;grid-template-columns:290px minmax(400px,1fr) 278px;gap:14px;align-items:stretch}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 12px #14313b0a;overflow:hidden}.panel-head{padding:15px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center}.sub{font-size:11px;color:var(--muted);font-weight:500}.trip-list{max-height:calc(100vh - 230px);min-height:430px;overflow:auto;padding:8px}.trip{padding:12px;border-radius:8px;border:1px solid transparent;cursor:pointer;margin:3px 0}.trip:hover{background:#f4f8f7}.trip.active{background:var(--sky);border-color:#aad8d2}.trip strong{display:block;font-size:14px}.trip small{color:var(--muted)}.trip .arrow{float:right;color:var(--sea)}
+    #map{height:calc(100vh - 195px);min-height:480px;background:#e8efed}.map-note{padding:9px 14px;display:flex;gap:14px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}.legend{display:flex;align-items:center;gap:6px}.swatch{display:inline-block;width:16px;height:4px;border-radius:3px;background:#008c86}.swatch.gps{height:9px;width:9px;border-radius:50%;background:#db842d}.swatch.road{height:2px;background:#5c6370}
+    .metrics{padding:13px}.metric{padding:13px 0;border-bottom:1px solid var(--line)}.metric:last-child{border:0}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{font-size:22px;display:block;margin-top:3px}.metric small{color:var(--muted)}.pill{font-size:11px;padding:4px 8px;border-radius:50px;background:#edf5f4;color:#08766e}.empty{color:var(--muted);padding:16px;font-size:13px}.note{margin-top:14px;color:var(--muted);font-size:12px}
+    button{border:0;background:var(--sea);color:white;padding:9px 12px;border-radius:7px;font-weight:650;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.toast{font-size:12px;color:var(--amber);padding:10px 14px;display:none}
+    @media(max-width:1020px){.grid{grid-template-columns:240px 1fr}.metrics-panel{grid-column:1/-1}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.trip-list{min-height:330px}.intro{align-items:start;flex-direction:column;gap:10px}#map{height:60vh}}
+    @media(max-width:650px){header{padding:0 16px}.wrap{padding:0 12px}.grid{grid-template-columns:1fr}.trip-list{min-height:0;max-height:220px}.metrics{grid-template-columns:1fr 1fr}#map{min-height:390px}.status{display:none}}
+  </style>
+</head>
+<body>
+  <header><div class="brand"><span class="mark">⌁</span>PathSnap <span style="font-weight:450;color:#bcd4d2">/ Route Lab</span></div><div class="status"><span class="dot"></span><span id="health">Connecting to inference API</span></div></header>
+  <main class="wrap">
+    <div class="intro"><div><h1>Trajectory reconstruction</h1><p>Choose a trip to map noisy GPS observations onto its road network.</p></div><label class="api">API endpoint <input id="apiBase" placeholder="http://192.168.1.20:8000"></label></div>
+    <div class="grid">
+      <section class="panel"><div class="panel-head">Evaluation trips <span class="sub" id="tripCount">Loading…</span></div><div class="trip-list" id="trips"><div class="empty">Connecting to the backend…</div></div><div id="tripError" class="toast"></div></section>
+      <section class="panel"><div class="panel-head"><span id="mapTitle">Route map</span><span id="mapBadge" class="pill">Select a trip</span></div><div id="map"></div><div class="map-note"><span class="legend"><i class="swatch gps"></i>GPS observations</span><span class="legend"><i class="swatch road"></i>Predicted road route</span></div></section>
+      <section class="panel metrics-panel"><div class="panel-head">Model results <span class="sub">server-side evaluation</span></div><div id="metrics" class="metrics"><div class="empty">Select a trip and run inference to see results.</div></div><div style="padding:0 13px 13px"><button id="run" disabled>Reconstruct route</button></div></section>
+    </div>
+    <div class="note">Reference routes stay on the inference server. The interface receives the reconstructed path and aggregate accuracy metrics.</div>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const $=s=>document.querySelector(s);let chosen=null,routeLayer=null,gpsLayer=null,map;
+    const saved=localStorage.getItem('pathsnap-api')||(location.origin==='null'?'http://localhost:8000':location.origin);$('#apiBase').value=saved;
+    function base(){return $('#apiBase').value.trim().replace(/\/$/,'')}
+    $('#apiBase').addEventListener('change',()=>{localStorage.setItem('pathsnap-api',base());loadTrips()});
+    map=L.map('map',{zoomControl:true}).setView([49.85,8.6],12);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+    async function loadTrips(){try{const h=await fetch(base()+'/health');if(!h.ok)throw Error('API unavailable');$('#health').textContent='Inference API connected';const r=await fetch(base()+'/trips');if(!r.ok)throw Error('Could not load trips');const trips=await r.json();$('#tripCount').textContent=trips.length+' trips';$('#trips').innerHTML=trips.map(t=>`<div class="trip" data-id="${t.trip_id}"><span class="arrow">›</span><strong>Trip ${t.trip_id}</strong><small>${t.observations.toLocaleString()} GPS points</small></div>`).join('');document.querySelectorAll('.trip').forEach(el=>el.onclick=()=>select(el.dataset.id));if(trips.length)select(trips[0].trip_id)}catch(e){$('#health').textContent='API not connected';$('#tripCount').textContent='Unavailable';$('#trips').innerHTML='<div class="empty">Could not reach the API. Set its address above and ensure the backend is running.</div>'}}
+    function select(id){chosen=id;document.querySelectorAll('.trip').forEach(e=>e.classList.toggle('active',e.dataset.id===id));$('#mapTitle').textContent='Trip '+id;$('#mapBadge').textContent='Ready to infer';$('#run').disabled=false;$('#metrics').innerHTML='<div class="empty">Ready to reconstruct this trip.</div>'}
+    function showMetric(label,value,help=''){return `<div class="metric"><span>${label}</span><strong>${value}</strong>${help?`<small>${help}</small>`:''}</div>`}
+    $('#run').onclick=async()=>{if(!chosen)return;$('#run').disabled=true;$('#run').textContent='Reconstructing…';$('#tripError').style.display='none';try{const res=await fetch(base()+'/predict/'+encodeURIComponent(chosen),{method:'POST'});const data=await res.json();if(!res.ok)throw Error(data.detail||'Prediction failed');if(routeLayer)map.removeLayer(routeLayer);if(gpsLayer)map.removeLayer(gpsLayer);gpsLayer=L.layerGroup(data.gps.map(p=>L.circleMarker(p,{radius:3,color:'#c66d1d',weight:1,fillColor:'#ed9b4a',fillOpacity:.7}))).addTo(map);routeLayer=L.polyline(data.predicted_route,{color:'#008b83',weight:5,opacity:.9}).addTo(map);const bounds=L.latLngBounds(data.gps.concat(data.predicted_route));map.fitBounds(bounds.pad(.1));const m=data.metrics;$('#metrics').innerHTML=showMetric('Classifier top-1 accuracy',(100*m.classifier_top1_accuracy).toFixed(1)+'%',m.scored_observations+' observations scored')+showMetric('After Viterbi decoding',(100*m.hmm_top1_accuracy).toFixed(1)+'%','pointwise accuracy')+showMetric('Candidate miss rate',(100*m.candidate_miss_rate).toFixed(1)+'%','reference arc not generated as a candidate')+showMetric('Route continuity',(100*m.classifier_route_continuity).toFixed(1)+'% → '+(100*m.hmm_route_continuity).toFixed(1)+'%','network-connected consecutive road segments');$('#mapBadge').textContent='Prediction complete'}catch(e){$('#tripError').textContent=e.message;$('#tripError').style.display='block'}finally{$('#run').disabled=false;$('#run').textContent='Reconstruct route'}};
+    loadTrips();
+  </script>
+</body>
+</html>
