@@ -1,0 +1,14 @@
+{
+  "selected_model": "xgboost",
+  "objective": "mean trip-grouped CV observation top-1 accuracy",
+  "best_value": 0.7575865229237119,
+  "params": {
+    "n_estimators": 128,
+    "max_depth": 8,
+    "learning_rate": 0.04127157753275815,
+    "subsample": 0.9808831198781978,
+    "colsample_bytree": 0.9821871655178658,
+    "min_child_weight": 1,
+    "reg_lambda": 4.154147093989519
+  }
+}
